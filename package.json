@@ -1,0 +1,62 @@
+{
+  "name": "@elizaos/plugin-livekit",
+  "version": "0.1.9",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "@elizaos/source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@elizaos/core": "workspace:*",
+    "@livekit/components-react": "^2.9.4",
+    "@livekit/rtc-node": "^0.13.13",
+    "livekit-client": "^2.11.4",
+    "livekit-server-sdk": "^2.12.0",
+    "eventemitter3": "^5.0.1"
+  },
+  "devDependencies": {
+    "tsup": "8.3.5",
+    "vitest": "^3.0.0"
+  },
+  "scripts": {
+    "build": "cd src/frontend && bun run build && cd ../.. && tsup src/index.ts --format esm --dts --tsconfig ./tsconfig.json",
+    "build:frontend": "cd src/frontend && bun run build",
+    "dev": "tsup src/index.ts --format esm --dts --watch --tsconfig ./tsconfig.json",
+    "test": "npx elizaos test"
+  },
+  "agentConfig": {
+    "pluginType": "elizaos:client:1.0.0",
+    "pluginParameters": {
+      "LIVEKIT_API_KEY": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The plugin requires the following environment variable: LIVEKIT_API_KEY=your_livekit_api_key",
+        "optional": false
+      },
+      "LIVEKIT_API_SECRET": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The plugin requires the following environment variable: LIVEKIT_API_SECRET=your_livekit_api_secret",
+        "optional": false
+      },
+      "LIVEKIT_URL": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The plugin requires the following environment variable: LIVEKIT_URL=your_livekit_server_url",
+        "optional": false
+      }
+    }
+  }
+}
