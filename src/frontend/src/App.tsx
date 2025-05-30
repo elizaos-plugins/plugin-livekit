@@ -54,10 +54,6 @@ export default function App() {
 
     // Auto-connect after onboarding
     try {
-      console.log("Jsonnnnn",JSON.stringify({
-        roomName: data.roomName,
-        participantName: data.participantName,
-      }))
       const response = await fetch(`${API_BASE_URL}/livekit/token`, {
         method: "POST",
         headers: {
@@ -69,11 +65,7 @@ export default function App() {
         }),
       })
 
-      console.log("repsonseeeee", response);
-
       const result = await response.json()
-
-      console.log("resulttttt", result);
 
       if ('error' in result) {
         throw new Error(result.error)
