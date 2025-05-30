@@ -2,7 +2,8 @@ import { useState, useEffect } from "react"
 import VoiceChatRoom from "@/components/voice-chat-room"
 import VoiceOnboarding from "@/components/voice-onboarding"
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const port = import.meta.env.VITE_SERVER_PORT
+const API_BASE_URL = `http://localhost:${port || 3000}`
 
 interface AgentInfo {
   id: string
@@ -53,6 +54,10 @@ export default function App() {
 
     // Auto-connect after onboarding
     try {
+      console.log("Jsonnnnn",JSON.stringify({
+        roomName: data.roomName,
+        participantName: data.participantName,
+      }))
       const response = await fetch(`${API_BASE_URL}/livekit/token`, {
         method: "POST",
         headers: {
@@ -64,7 +69,11 @@ export default function App() {
         }),
       })
 
+      console.log("repsonseeeee", response);
+
       const result = await response.json()
+
+      console.log("resulttttt", result);
 
       if ('error' in result) {
         throw new Error(result.error)
