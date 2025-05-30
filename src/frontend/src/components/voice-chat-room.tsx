@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Mic, MicOff, PhoneOff, Volume2, VolumeX, User, Loader2, Settings } from "lucide-react"
+import { Mic, MicOff, PhoneOff, Volume2, VolumeX, User, Loader2, Settings, Bot } from "lucide-react"
 import AgentStatusIndicator from "@/components/agent-status-indicator"
 import ConversationTranscript from "@/components/conversation-transcript"
 import AudioVisualizer from "@/components/audio-visualizer"
@@ -173,8 +173,8 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
           <div className="mb-4 space-y-3 pb-4 border-b">
             <div>
               <Label className="text-xs">Microphone</Label>
-              <Select 
-                value={selectedInputDevice} 
+              <Select
+                value={selectedInputDevice}
                 onValueChange={(value) => switchDevice(value, 'audioinput')}
                 disabled={isSwitchingDevice}
               >
@@ -194,8 +194,8 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
             </div>
             <div>
               <Label className="text-xs">Speaker</Label>
-              <Select 
-                value={selectedOutputDevice} 
+              <Select
+                value={selectedOutputDevice}
                 onValueChange={(value) => switchDevice(value, 'audiooutput')}
                 disabled={isSwitchingDevice}
               >
@@ -265,16 +265,24 @@ function ParticipantsList({ agentInfo }: { agentInfo: AgentInfo | null }) {
             participants.map((participant) => {
               const micTrack = participant.getTrackPublication(Track.Source.Microphone)
               const isAgent = agentInfo && participant.identity === agentInfo.id
-              
+
               return (
                 <div key={participant.identity} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
                   <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
-                    {isAgent && agentInfo.avatar ? (
-                      <img 
-                        src={agentInfo.avatar} 
-                        alt={agentInfo.name}
+                    {isAgent && agentInfo?.avatar ? (
+                      <img
+                        src={agentInfo.avatar}
+                        alt={agentInfo?.name || 'Agent'}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to Bot icon if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
                       />
+                    ) : null}
+                    {isAgent ? (
+                      <Bot className={`w-4 h-4 ${isAgent && agentInfo?.avatar ? 'hidden' : ''}`} />
                     ) : (
                       <User className="w-4 h-4" />
                     )}
@@ -335,8 +343,8 @@ function VoiceChatContent({ agentInfo, onDisconnect }: { agentInfo: AgentInfo | 
         <ParticipantsList agentInfo={agentInfo} />
       </div>
       <div>
-        <ConversationTranscript 
-          isRecording={true} 
+        <ConversationTranscript
+          isRecording={true}
           messages={messages}
           onClearTranscript={clearMessages}
         />
@@ -364,9 +372,6 @@ export default function VoiceChatRoom({ token, roomName, agentInfo, onDisconnect
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">Voice Agent Chat</h1>
-      </div>
 
       {connectionState === "connecting" && (
         <Card className="mb-6">

@@ -1,11 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Bot, Wifi, WifiOff, AlertCircle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useConnectionState, useRoomInfo } from "@livekit/components-react"
-import { ConnectionQuality } from "livekit-client"
+import { AlertCircle, Bot, Wifi, WifiOff } from "lucide-react"
 
 interface AgentStatusIndicatorProps {
   isConnected: boolean
@@ -15,10 +13,10 @@ interface AgentStatusIndicatorProps {
 export default function AgentStatusIndicator({ isConnected, agentState }: AgentStatusIndicatorProps) {
   const connectionState = useConnectionState()
   const roomInfo = useRoomInfo()
-  
+
   const getQualityText = () => {
     if (!isConnected) return "unknown"
-    
+
     // Use connection state to determine quality
     switch (connectionState) {
       case "connected":
@@ -33,7 +31,7 @@ export default function AgentStatusIndicator({ isConnected, agentState }: AgentS
         return "unknown"
     }
   }
-  
+
   const qualityText = getQualityText()
 
   const getConnectionIcon = () => {

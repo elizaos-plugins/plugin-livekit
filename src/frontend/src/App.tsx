@@ -65,7 +65,7 @@ export default function App() {
       })
 
       const result = await response.json()
-      
+
       if ('error' in result) {
         throw new Error(result.error)
       }
@@ -103,7 +103,7 @@ export default function App() {
       })
 
       const result = await response.json()
-      
+
       if ('error' in result) {
         throw new Error(result.error)
       }
@@ -122,8 +122,8 @@ export default function App() {
   }
 
   return (
-    <div 
-      className="dark antialiased font-sans min-h-screen bg-background"
+    <div
+      className="dark antialiased font-sans min-h-screen bg-background p-4"
       style={{
         colorScheme: 'dark',
       }}
