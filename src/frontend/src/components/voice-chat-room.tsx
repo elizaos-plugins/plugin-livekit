@@ -232,7 +232,7 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
             className="flex flex-col gap-1 h-auto py-3"
           >
             {isAudioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-            <span className="text-xs">{isAudioEnabled ? "Disable" : "Enable"}</span>
+            <span className="text-xs">{isAudioEnabled ? "Mute" : "Un-mute"}</span>
           </Button>
           <Button
             variant="destructive"

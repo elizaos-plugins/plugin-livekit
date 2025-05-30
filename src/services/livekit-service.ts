@@ -40,6 +40,7 @@ export interface LiveKitEvents {
   'audioReceived': (participantId: string, audioBuffer: Buffer) => void;
   'speechStarted': (participantId: string) => void;
   'speechEnded': (participantId: string, audioBuffer: Buffer) => void;
+  'speechTurn': (participantId: string, audioBuffer: Buffer, speechDuration: number) => void;
   'interruptionDetected': (participantId: string) => void;
   'agentStateChanged': (state: 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking') => void;
 }
@@ -377,8 +378,17 @@ export class LiveKitService extends Service {
    */
   private async processSpeechTurn(participantId: string, audioBuffer: Buffer, roomName: string): Promise<void> {
     const userState = this.userStates.get(participantId);
-    if (!userState || userState.isProcessing) return;
+    if (!userState) {
+      logger.warn(`[LiveKitService] No user state found for ${participantId}`);
+      return;
+    }
+    
+    if (userState.isProcessing) {
+      logger.warn(`[LiveKitService] Already processing speech for ${participantId}, skipping`);
+      return;
+    }
 
+    logger.info(`[LiveKitService] Starting speech processing for ${participantId}, buffer size: ${audioBuffer.length} bytes`);
     userState.isProcessing = true;
 
     try {
@@ -410,6 +420,12 @@ export class LiveKitService extends Service {
     } catch (error) {
       logger.error(`[LiveKitService] Error processing speech turn:`, error);
       this.setAgentState('listening');
+    } finally {
+      // Always reset processing flag
+      if (userState) {
+        userState.isProcessing = false;
+        logger.debug(`[LiveKitService] Reset isProcessing flag for ${participantId}`);
+      }
     }
   }
 
@@ -1107,8 +1123,33 @@ export class LiveKitService extends Service {
       logger.debug(`[LiveKitService] Speech started from ${participantId}`);
     });
 
-    this.eventEmitter.on('speechEnded', (participantId: string) => {
-      logger.debug(`[LiveKitService] Speech ended from ${participantId}`);
+    this.eventEmitter.on('speechEnded', (participantId: string, audioBuffer: Buffer) => {
+      logger.debug(`[LiveKitService] Speech ended from ${participantId}, processing audio buffer (${audioBuffer.length} bytes)`);
+      
+      // Get the room name for this participant
+      const roomName = Array.from(this.rooms.keys())[0]; // Get the first room (assuming single room for now)
+      if (roomName) {
+        this.processSpeechTurn(participantId, audioBuffer, roomName);
+      } else {
+        logger.warn(`[LiveKitService] No room found for participant ${participantId}`);
+      }
+    });
+
+    this.eventEmitter.on('speechTurn', (participantId: string, audioBuffer: Buffer, speechDuration: number) => {
+      logger.info(`[LiveKitService] Speech turn detected from ${participantId}, duration: ${speechDuration}ms, processing audio buffer (${audioBuffer.length} bytes)`);
+      
+      // Get the room name for this participant
+      const roomName = Array.from(this.rooms.keys())[0]; // Get the first room (assuming single room for now)
+      if (roomName) {
+        this.processSpeechTurn(participantId, audioBuffer, roomName);
+      } else {
+        logger.warn(`[LiveKitService] No room found for participant ${participantId}`);
+      }
+    });
+
+    this.eventEmitter.on('interruptionDetected', (participantId: string) => {
+      logger.debug(`[LiveKitService] Interruption detected: ${participantId}`);
+      this.handleInterruption(participantId, Array.from(this.rooms.keys())[0]);
     });
   }
 
