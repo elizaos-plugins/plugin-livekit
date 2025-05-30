@@ -1,5 +1,7 @@
-import { AccessToken, AccessTokenOptions } from 'livekit-server-sdk';
+import { AccessToken } from 'livekit-server-sdk';
 import { logger } from '@elizaos/core';
+import { IAgentRuntime } from '@elizaos/core';
+import { LiveKitService } from '../services/livekit-service';
 
 interface TokenRequest {
   roomName: string;
@@ -18,7 +20,7 @@ export const livekitTokenRoute = {
   type: 'POST' as const,
   name: 'LiveKit Token',
   path: '/livekit/token',
-  handler: async (req: any, res: any, runtime: any) => {
+  handler: async (req: any, res: any, runtime: IAgentRuntime) => {
     try {
       let body: TokenRequest;
 
@@ -68,12 +70,13 @@ export const livekitTokenRoute = {
       logger.debug(`[LiveKit] User ${participantName} requesting token for room ${roomName}`);
 
       // Get the LiveKit service and trigger agent auto-join
-      const liveKitService = runtime.getService('livekit');
+      const liveKitService = runtime.getService('livekit') as LiveKitService;
       if (liveKitService && typeof liveKitService.autoJoinRoom === 'function') {
         // Delay agent join slightly to allow user to connect first
         setTimeout(async () => {
           try {
-            await liveKitService.autoJoinRoom(roomName, `agent-${runtime.agentId}`);
+            // Remove "agent-" prefix and use runtime.agentId directly
+            await liveKitService.autoJoinRoom(roomName, runtime.agentId);
             logger.debug(`[LiveKit] Agent auto-joined room ${roomName}`);
           } catch (error) {
             console.error(`[LiveKit] Failed to auto-join room ${roomName}:`, error);
@@ -86,7 +89,13 @@ export const livekitTokenRoute = {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         token: jwt,
-        url: process.env.LIVEKIT_URL || 'ws://localhost:7880'
+        url: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+        agent: {
+          id: runtime?.agentId,
+          name: runtime?.character?.name,
+          bio: runtime?.character?.bio[0],
+          avatar: runtime?.character?.settings?.avatar,
+        }
       }));
     } catch (error) {
       console.error("Error generating token:", error);
@@ -126,7 +135,7 @@ export const livekitJoinAgentRoute = {
       logger.debug(`[LiveKit] Manual agent join request for room ${roomName} with identity ${agentIdentity}`);
 
       // Get the LiveKit service and trigger agent join
-      const liveKitService = runtime.getService('livekit');
+      const liveKitService = runtime.getService('livekit') as LiveKitService;
       if (liveKitService && typeof liveKitService.autoJoinRoom === 'function') {
         try {
           await liveKitService.autoJoinRoom(roomName, agentIdentity);

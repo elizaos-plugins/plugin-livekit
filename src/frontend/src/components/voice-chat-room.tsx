@@ -14,15 +14,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Mic, MicOff, PhoneOff, Volume2, VolumeX, User, Bot, Loader2, Settings } from "lucide-react"
+import { Mic, MicOff, PhoneOff, Volume2, VolumeX, User, Loader2, Settings } from "lucide-react"
 import AgentStatusIndicator from "@/components/agent-status-indicator"
 import ConversationTranscript from "@/components/conversation-transcript"
 import AudioVisualizer from "@/components/audio-visualizer"
 import { useTranscription } from "@/hooks/use-transcription"
 
+interface AgentInfo {
+  id: string
+  name: string
+  avatar: string | null
+}
+
 interface VoiceChatRoomProps {
   token: string
   roomName: string
+  agentInfo: AgentInfo | null
   onDisconnect: () => void
 }
 
@@ -36,7 +43,6 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
   const [selectedOutputDevice, setSelectedOutputDevice] = useState<string>("default")
   const [showDeviceSettings, setShowDeviceSettings] = useState(false)
   const [isSwitchingDevice, setIsSwitchingDevice] = useState(false)
-  const [isJoiningAgent, setIsJoiningAgent] = useState(false)
 
   // Load available devices
   useEffect(() => {
@@ -109,194 +115,133 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
     }
   }
 
-  const switchInputDevice = async (deviceId: string) => {
+  const switchDevice = async (deviceId: string, kind: MediaDeviceKind) => {
     if (isSwitchingDevice) return // Prevent multiple simultaneous switches
 
     try {
       setIsSwitchingDevice(true)
-      setSelectedInputDevice(deviceId)
+      if (kind === 'audioinput') {
+        setSelectedInputDevice(deviceId)
+      } else {
+        setSelectedOutputDevice(deviceId)
+      }
 
       // Get current mute state
       const currentlyMuted = isMuted
 
       // Switch the microphone device by first disabling then re-enabling with new device
-      await localParticipant.setMicrophoneEnabled(false)
+      if (kind === 'audioinput') {
+        await localParticipant.setMicrophoneEnabled(false)
 
-      // Small delay to ensure cleanup
-      await new Promise(resolve => setTimeout(resolve, 100))
+        // Small delay to ensure cleanup
+        await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Re-enable with new device constraints
-      const constraints = deviceId !== "default" ? { deviceId: { exact: deviceId } } : undefined
-      await localParticipant.setMicrophoneEnabled(!currentlyMuted, constraints)
-
+        // Re-enable with new device constraints
+        const constraints = deviceId !== "default" ? { deviceId: { exact: deviceId } } : undefined
+        await localParticipant.setMicrophoneEnabled(!currentlyMuted, constraints)
+      }
     } catch (error) {
-      console.error("Failed to switch input device:", error)
+      console.error("Failed to switch device:", error)
       // Revert selection on error
-      setSelectedInputDevice(selectedInputDevice)
+      if (kind === 'audioinput') {
+        setSelectedInputDevice(selectedInputDevice)
+      } else {
+        setSelectedOutputDevice(selectedOutputDevice)
+      }
     } finally {
       setIsSwitchingDevice(false)
     }
   }
 
-  const switchOutputDevice = async (deviceId: string) => {
-    try {
-      setSelectedOutputDevice(deviceId)
-      // Note: Setting output device is limited in web browsers
-      // This is more for UI feedback and future enhancement
-      console.log("Selected output device:", deviceId)
-    } catch (error) {
-      console.error("Failed to switch output device:", error)
-    }
-  }
-
-  const joinAgentManually = async () => {
-    if (isJoiningAgent) return
-
-    try {
-      setIsJoiningAgent(true)
-
-      // Get current room name from localStorage or use default
-      const roomName = localStorage.getItem('voice-chat-room-name') || 'voice-agent-room'
-
-      // Call the agent join endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/livekit/join-agent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomName: roomName,
-          agentIdentity: `agent-manual-${Date.now()}`
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to join agent")
-      }
-
-      console.log("Agent join request sent successfully")
-    } catch (error) {
-      console.error("Failed to join agent:", error)
-    } finally {
-      setIsJoiningAgent(false)
-    }
-  }
-
-  // Helper functions for device lists
-  const inputDevices = devices.filter(device => device.kind === 'audioinput' && device.deviceId)
-  const outputDevices = devices.filter(device => device.kind === 'audiooutput' && device.deviceId)
-
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <User className="w-5 h-5" />
-          Voice Controls
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Controls</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDeviceSettings(!showDeviceSettings)}
+            className="h-8 w-8"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {/* Main Controls */}
-          <div className="grid grid-cols-4 gap-3">
-            <Button
-              variant={isMuted ? "destructive" : "outline"}
-              size="lg"
-              onClick={toggleMute}
-              className="flex flex-col gap-1 h-auto py-3"
-            >
-              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              <span className="text-xs">{isMuted ? "Unmute" : "Mute"}</span>
-            </Button>
-
-            <Button
-              variant={isAudioEnabled ? "outline" : "destructive"}
-              size="lg"
-              onClick={toggleAudio}
-              className="flex flex-col gap-1 h-auto py-3"
-            >
-              {isAudioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              <span className="text-xs">{isAudioEnabled ? "Audio On" : "Audio Off"}</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setShowDeviceSettings(!showDeviceSettings)}
-              className="flex flex-col gap-1 h-auto py-3"
-            >
-              <Settings className="w-5 h-5" />
-              <span className="text-xs">Devices</span>
-            </Button>
-
-            <Button variant="destructive" size="lg" onClick={onDisconnect} className="flex flex-col gap-1 h-auto py-3">
-              <PhoneOff className="w-5 h-5" />
-              <span className="text-xs">Disconnect</span>
-            </Button>
-          </div>
-
-          {/* Device Settings */}
-          {showDeviceSettings && (
-            <div className="space-y-3 p-3 bg-muted rounded-lg">
-              <h4 className="text-sm font-medium">Audio Devices</h4>
-
-              {/* Input Device Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs flex items-center gap-2">
-                  Microphone
-                  {isSwitchingDevice && <Loader2 className="w-3 h-3 animate-spin" />}
-                </Label>
-                <Select value={selectedInputDevice} onValueChange={switchInputDevice} disabled={isSwitchingDevice}>
-                  <SelectTrigger className="h-8 text-xs disabled:opacity-50">
-                    <SelectValue placeholder="Select microphone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">
-                      Default Microphone
-                    </SelectItem>
-                    {inputDevices.map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                      >
-                        {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
+        {showDeviceSettings && (
+          <div className="mb-4 space-y-3 pb-4 border-b">
+            <div>
+              <Label className="text-xs">Microphone</Label>
+              <Select 
+                value={selectedInputDevice} 
+                onValueChange={(value) => switchDevice(value, 'audioinput')}
+                disabled={isSwitchingDevice}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {devices
+                    .filter(device => device.kind === 'audioinput')
+                    .map(device => (
+                      <SelectItem key={device.deviceId} value={device.deviceId}>
+                        {device.label || 'Microphone'}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Output Device Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs">Speakers</Label>
-                <Select value={selectedOutputDevice} onValueChange={switchOutputDevice}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select speakers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">
-                      Default Speakers
-                    </SelectItem>
-                    {outputDevices.map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                      >
-                        {device.label || `Speaker ${device.deviceId.slice(0, 8)}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div>
+              <Label className="text-xs">Speaker</Label>
+              <Select 
+                value={selectedOutputDevice} 
+                onValueChange={(value) => switchDevice(value, 'audiooutput')}
+                disabled={isSwitchingDevice}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {devices
+                    .filter(device => device.kind === 'audiooutput')
+                    .map(device => (
+                      <SelectItem key={device.deviceId} value={device.deviceId}>
+                        {device.label || 'Speaker'}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+        <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant={isMuted ? "destructive" : "outline"}
             size="lg"
-            onClick={joinAgentManually}
-            disabled={isJoiningAgent}
+            onClick={toggleMute}
             className="flex flex-col gap-1 h-auto py-3"
           >
-            {isJoiningAgent ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bot className="w-5 h-5" />}
-            <span className="text-xs">{isJoiningAgent ? "Joining..." : "Join Agent"}</span>
+            {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            <span className="text-xs">{isMuted ? "Unmute" : "Mute"}</span>
+          </Button>
+          <Button
+            variant={isAudioEnabled ? "outline" : "destructive"}
+            size="lg"
+            onClick={toggleAudio}
+            className="flex flex-col gap-1 h-auto py-3"
+          >
+            {isAudioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            <span className="text-xs">{isAudioEnabled ? "Disable" : "Enable"}</span>
+          </Button>
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={onDisconnect}
+            className="flex flex-col gap-1 h-auto py-3"
+          >
+            <PhoneOff className="w-5 h-5" />
+            <span className="text-xs">Disconnect</span>
           </Button>
         </div>
       </CardContent>
@@ -304,7 +249,7 @@ function VoiceAssistantControls({ onDisconnect }: { onDisconnect: () => void }) 
   )
 }
 
-function ParticipantsList() {
+function ParticipantsList({ agentInfo }: { agentInfo: AgentInfo | null }) {
   const participants = useParticipants()
 
   return (
@@ -319,18 +264,24 @@ function ParticipantsList() {
           ) : (
             participants.map((participant) => {
               const micTrack = participant.getTrackPublication(Track.Source.Microphone)
+              const isAgent = agentInfo && participant.identity === agentInfo.id
+              
               return (
                 <div key={participant.identity} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
-                  <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                    {participant.identity.includes("agent") ? (
-                      <Bot className="w-4 h-4" />
+                  <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                    {isAgent && agentInfo.avatar ? (
+                      <img 
+                        src={agentInfo.avatar} 
+                        alt={agentInfo.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <User className="w-4 h-4" />
                     )}
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-sm">
-                      {participant.identity.includes("agent") ? "AI Agent" : "You"}
+                      {isAgent ? agentInfo.name : "You"}
                     </div>
                     <div className="text-xs text-muted-foreground">{participant.identity}</div>
                   </div>
@@ -353,7 +304,7 @@ function ParticipantsList() {
   )
 }
 
-function VoiceChatContent({ onDisconnect }: { onDisconnect: () => void }) {
+function VoiceChatContent({ agentInfo, onDisconnect }: { agentInfo: AgentInfo | null; onDisconnect: () => void }) {
   const { state } = useVoiceAssistant()
   const tracks = useTracks([Track.Source.Microphone], { onlySubscribed: true })
   const { messages, clearMessages } = useTranscription()
@@ -381,7 +332,7 @@ function VoiceChatContent({ onDisconnect }: { onDisconnect: () => void }) {
         </Card>
       </div>
       <div>
-        <ParticipantsList />
+        <ParticipantsList agentInfo={agentInfo} />
       </div>
       <div>
         <ConversationTranscript 
@@ -394,7 +345,7 @@ function VoiceChatContent({ onDisconnect }: { onDisconnect: () => void }) {
   )
 }
 
-export default function VoiceChatRoom({ token, roomName, onDisconnect }: VoiceChatRoomProps) {
+export default function VoiceChatRoom({ token, roomName, agentInfo, onDisconnect }: VoiceChatRoomProps) {
   const [wsURL] = useState(import.meta.env.VITE_LIVEKIT_URL || "wss://lvie-fd0we5n9.livekit.cloud")
   const [connectionState, setConnectionState] = useState<"connecting" | "connected" | "disconnected">("connecting")
   const [error, setError] = useState<string>("")
@@ -415,9 +366,6 @@ export default function VoiceChatRoom({ token, roomName, onDisconnect }: VoiceCh
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Voice Agent Chat</h1>
-        <p className="text-muted-foreground">
-          Connected to room: <span className="font-mono">{roomName}</span>
-        </p>
       </div>
 
       {connectionState === "connecting" && (
@@ -453,7 +401,7 @@ export default function VoiceChatRoom({ token, roomName, onDisconnect }: VoiceCh
           setError(`Connection error: ${error.message}`)
         }}
       >
-        <VoiceChatContent onDisconnect={onDisconnect} />
+        <VoiceChatContent agentInfo={agentInfo} onDisconnect={onDisconnect} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
