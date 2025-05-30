@@ -1,6 +1,6 @@
 {
   "name": "@elizaos/plugin-livekit",
-  "version": "0.1.9",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -19,7 +19,7 @@
     "dist"
   ],
   "dependencies": {
-    "@elizaos/core": "workspace:*",
+    "@elizaos/core": "^1.0.0",
     "@livekit/components-react": "^2.9.4",
     "@livekit/rtc-node": "^0.13.13",
     "livekit-client": "^2.11.4",
