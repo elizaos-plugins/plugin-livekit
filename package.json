@@ -1,6 +1,6 @@
 {
   "name": "@elizaos/plugin-livekit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -56,6 +56,95 @@
         "minLength": 1,
         "description": "The plugin requires the following environment variable: LIVEKIT_URL=your_livekit_server_url",
         "optional": false
+      },
+      "VITE_SERVER_PORT": {
+        "type": "string",
+        "description": "Port number for the local server used to build the API_BASE_URL in the frontend.",
+        "required": false,
+        "default": "3000"
+      },
+      "VITE_LIVEKIT_URL": {
+        "type": "string",
+        "description": "The LiveKit WebSocket server URL used by the client to establish voice chat connections.",
+        "required": false,
+        "default": "wss://lvie-fd0we5n9.livekit.cloud"
+      },
+      "VITE_API_BASE_URL": {
+        "type": "string",
+        "description": "Base URL for API requests used by the Vite front-end.",
+        "required": true
+      },
+      "SERVER_PORT": {
+        "type": "string",
+        "description": "Port number where the backend server is expected to run; used to set import.meta.env.VITE_SERVER_PORT for the client.",
+        "required": false,
+        "default": "3000"
+      },
+      "LIVEKIT_ENABLE_TURN_DETECTION": {
+        "type": "boolean",
+        "description": "Enable or disable voice turn detection logic in LiveKitService. Set to 'false' to disable; otherwise turn detection is enabled.",
+        "required": false,
+        "default": "true"
+      },
+      "LIVEKIT_SILENCE_THRESHOLD": {
+        "type": "number",
+        "description": "Audio energy threshold below which audio is considered silence during voice activity detection.",
+        "required": false,
+        "default": 0.01
+      },
+      "LIVEKIT_SPEECH_THRESHOLD": {
+        "type": "number",
+        "description": "Audio energy threshold above which audio is considered speech during voice activity detection.",
+        "required": false,
+        "default": 0.1
+      },
+      "LIVEKIT_MIN_SPEECH_DURATION": {
+        "type": "number",
+        "description": "Minimum duration in milliseconds that speech must last to be considered a valid speech segment.",
+        "required": false,
+        "default": 500
+      },
+      "LIVEKIT_MAX_SPEECH_DURATION": {
+        "type": "number",
+        "description": "Maximum duration in milliseconds allowed for a single speech segment before it is automatically cut off.",
+        "required": false,
+        "default": 30000
+      },
+      "LIVEKIT_DEBOUNCE_THRESHOLD": {
+        "type": "number",
+        "description": "Time in milliseconds used to debounce between speech segments, preventing rapid toggling between speaking and silence.",
+        "required": false,
+        "default": 1500
+      },
+      "LIVEKIT_SILENCE_FRAMES_REQUIRED": {
+        "type": "number",
+        "description": "Number of consecutive silence frames required to classify the end of speech.",
+        "required": false,
+        "default": 150
+      },
+      "LIVEKIT_SPEECH_FRAMES_REQUIRED": {
+        "type": "number",
+        "description": "Number of consecutive speech frames required to classify the start of speech.",
+        "required": false,
+        "default": 3
+      },
+      "LIVEKIT_SAMPLE_RATE": {
+        "type": "number",
+        "description": "Sample rate in hertz used for audio processing and resampling operations.",
+        "required": false,
+        "default": 48000
+      },
+      "LIVEKIT_CHANNELS": {
+        "type": "number",
+        "description": "Number of audio channels (1 for mono, 2 for stereo) used in audio processing.",
+        "required": false,
+        "default": 1
+      },
+      "LIVEKIT_FRAME_SIZE": {
+        "type": "number",
+        "description": "Number of samples per audio frame used during audio capture and processing.",
+        "required": false,
+        "default": 480
       }
     }
   }
